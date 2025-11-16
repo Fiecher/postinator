@@ -26,6 +26,6 @@ go.work.sum
 
 # PostInator
 .vscode/
-app/temp
-resources/test.jpg
-resources/Buran USSR.ttf
+temp
+assets/test.jpg
+assets/Buran USSR.ttf
