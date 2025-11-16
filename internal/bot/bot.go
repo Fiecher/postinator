@@ -13,6 +13,7 @@ type Bot interface {
 	SendPhoto(ctx context.Context, chatID int64, filePath string) error
 	SendDocument(ctx context.Context, chatID int64, filePath string) error
 	SendChatAction(ctx context.Context, chatID int64, action string) error
+	SendFileAuto(ctx context.Context, chatID int64, filePath string) error
 
 	GetFile(ctx context.Context, fileID string) (*BotFile, error)
 	FileDownloadURL(filePath string) string

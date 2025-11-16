@@ -10,23 +10,29 @@ import (
 
 	"postinator/internal/bot"
 	"postinator/internal/config"
+	"postinator/internal/files"
 	"postinator/internal/handlers"
 	"postinator/internal/services"
 	"postinator/internal/storage"
 )
 
 func main() {
-	cfg := config.Load()
-
 	logger := log.Default()
+	cfg := config.Load(logger)
+
 	photoStorage := storage.NewInMemoryPhotoStorage()
 	imageService := services.NewImageService(cfg.AssetsDir, cfg.TempDir, cfg.MaxFileSize)
-	botService, err := bot.NewTelegramBot(cfg.BotToken, logger)
+	botService, err := bot.NewTelegramBot(cfg.BotToken, logger, cfg.MaxFileSize)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	photoHandler := handlers.NewPhotoHandler(imageService, botService, photoStorage, logger)
+	fileManager, err := files.NewTelegramFileManager(botService, cfg.TempDir, cfg.BotToken)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	photoHandler := handlers.NewPhotoHandler(imageService, botService, fileManager, photoStorage, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

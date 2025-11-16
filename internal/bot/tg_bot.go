@@ -10,11 +10,12 @@ import (
 )
 
 type TelegramBot struct {
-	client *telego.Bot
-	logger *log.Logger
+	client      *telego.Bot
+	logger      *log.Logger
+	maxFileSize int64
 }
 
-func NewTelegramBot(token string, logger *log.Logger) (Bot, error) {
+func NewTelegramBot(token string, logger *log.Logger, maxFileSize int64) (Bot, error) {
 	if logger == nil {
 		logger = log.Default()
 	}
@@ -25,8 +26,9 @@ func NewTelegramBot(token string, logger *log.Logger) (Bot, error) {
 	}
 
 	return &TelegramBot{
-		client: b,
-		logger: logger,
+		client:      b,
+		logger:      logger,
+		maxFileSize: maxFileSize,
 	}, nil
 }
 
@@ -147,4 +149,16 @@ func (tb *TelegramBot) GetFile(ctx context.Context, fileID string) (*BotFile, er
 
 func (tb *TelegramBot) FileDownloadURL(filePath string) string {
 	return fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", tb.client.Token, filePath)
+}
+
+func (tb *TelegramBot) SendFileAuto(ctx context.Context, chatID int64, filePath string) error {
+	stat, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("stat file: %w", err)
+	}
+
+	if stat.Size() <= tb.maxFileSize {
+		return tb.SendPhoto(ctx, chatID, filePath)
+	}
+	return tb.SendDocument(ctx, chatID, filePath)
 }
