@@ -4,5 +4,5 @@ type Config struct {
 	BotToken    string
 	AssetsDir   string
 	TempDir     string
-	MaxFileSize int
+	MaxFileSize int64
 }

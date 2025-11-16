@@ -6,21 +6,21 @@ import (
 	"strconv"
 )
 
-func Load() *Config {
+func Load(logger *log.Logger) *Config {
 	token := os.Getenv("TOKEN")
 	if token == "" {
-		log.Fatal("TOKEN environment variable is required")
+		logger.Fatal("TOKEN environment variable is required")
 	}
 
 	return &Config{
 		BotToken:    token,
-		AssetsDir:   getEnv("ASSETS_DIR", "./assets", parseString),
-		TempDir:     getEnv("TEMP_DIR", "./temp", parseString),
-		MaxFileSize: getEnv("MAX_FILE_SIZE", 10*1024*1024, parseInt),
+		AssetsDir:   getEnv(logger, "ASSETS_DIR", "./assets", parseString),
+		TempDir:     getEnv(logger, "TEMP_DIR", "./temp", parseString),
+		MaxFileSize: getEnv(logger, "MAX_FILE_SIZE", 10*1024*1024, parseInt),
 	}
 }
 
-func getEnv[T any](key string, defaultValue T, parser func(string) (T, error)) T {
+func getEnv[T any](logger *log.Logger, key string, defaultValue T, parser func(string) (T, error)) T {
 	val := os.Getenv(key)
 	if val == "" {
 		return defaultValue
@@ -28,7 +28,7 @@ func getEnv[T any](key string, defaultValue T, parser func(string) (T, error)) T
 
 	parsed, err := parser(val)
 	if err != nil {
-		log.Printf("WARNING: invalid value for %s (%s). Using default: %v\n", key, val, defaultValue)
+		logger.Printf("[WARN]: invalid value for %s (%s). Using default: %v\n", key, val, defaultValue)
 		return defaultValue
 	}
 
@@ -39,6 +39,6 @@ func parseString(val string) (string, error) {
 	return val, nil
 }
 
-func parseInt(val string) (int, error) {
-	return strconv.Atoi(val)
+func parseInt(val string) (int64, error) {
+	return strconv.ParseInt(val, 10, 64)
 }
