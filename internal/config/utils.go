@@ -12,10 +12,17 @@ func Load(logger *log.Logger) *Config {
 		logger.Fatal("TOKEN environment variable is required")
 	}
 
+	assetsDir := getEnv(logger, "ASSETS_DIR", "./assets", parseString)
+
 	return &Config{
-		BotToken:    token,
-		AssetsDir:   getEnv(logger, "ASSETS_DIR", "./assets", parseString),
-		TempDir:     getEnv(logger, "TEMP_DIR", "./temp", parseString),
+		BotToken:  token,
+		AssetsDir: assetsDir,
+		TempDir:   getEnv(logger, "TEMP_DIR", "./temp", parseString),
+
+		BackgroundFile: getEnv(logger, "BG_FILE", "BG.png", parseString),
+		OverlayFile:    getEnv(logger, "OVERLAY_FILE", "Overlay.png", parseString),
+		FontFile:       getEnv(logger, "FONT_FILE", "BURAN USSR.ttf", parseString),
+
 		MaxFileSize: getEnv(logger, "MAX_FILE_SIZE", 10*1024*1024, parseInt),
 	}
 }

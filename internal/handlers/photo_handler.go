@@ -17,7 +17,7 @@ type PhotoHandler struct {
 	imageService *services.ImageService
 	bot          bot.Bot
 	fileManager  files.FileManager
-	photoStorage *storage.InMemoryPhotoStorage
+	stateStore   *storage.RenderStateStore
 	logger       *log.Logger
 }
 
@@ -25,14 +25,14 @@ func NewPhotoHandler(
 	imageService *services.ImageService,
 	bot bot.Bot,
 	fileManager files.FileManager,
-	photoStorage *storage.InMemoryPhotoStorage,
+	stateStore *storage.RenderStateStore,
 	logger *log.Logger,
 ) *PhotoHandler {
 	return &PhotoHandler{
 		imageService: imageService,
 		bot:          bot,
 		fileManager:  fileManager,
-		photoStorage: photoStorage,
+		stateStore:   stateStore,
 		logger:       logger,
 	}
 }
@@ -84,7 +84,6 @@ func (ph *PhotoHandler) process(ctx context.Context, msg *telego.Message) (strin
 		return "", nil, err
 	}
 
-	// скачиваем в temp
 	localPath, cleanupTemp, err := ph.fileManager.DownloadToTemp(ctx, fileID)
 	if err != nil {
 		return "", nil, fmt.Errorf("download failed: %w", err)
@@ -92,14 +91,12 @@ func (ph *PhotoHandler) process(ctx context.Context, msg *telego.Message) (strin
 
 	text := getText(msg)
 
-	// рендерим
 	resultPath, err := ph.imageService.Render(localPath, text)
 	if err != nil {
 		cleanupTemp()
 		return "", nil, fmt.Errorf("render error: %w", err)
 	}
 
-	// cleanup для обоих файлов
 	cleanup := func() {
 		cleanupTemp()
 		_ = os.Remove(resultPath)
@@ -109,15 +106,12 @@ func (ph *PhotoHandler) process(ctx context.Context, msg *telego.Message) (strin
 }
 
 func (ph *PhotoHandler) withProcessing(ctx context.Context, chatID int64, fn func() error) error {
-	if ph.photoStorage.IsProcessing(chatID) {
-		if err := ph.bot.SendText(ctx, chatID, "😵‍💫 Slow down, I'm already postinatin' it."); err != nil {
-			return err
-		}
+	if !ph.stateStore.TryStart(chatID) {
+		_ = ph.bot.SendText(ctx, chatID, "😵‍💫 Slow down, I'm already postinatin' it.")
 		return fmt.Errorf("already processing")
 	}
 
-	ph.photoStorage.SetProcessing(chatID)
-	defer ph.photoStorage.ClearProcessing(chatID)
+	defer ph.stateStore.Finish(chatID)
 
 	return fn()
 }

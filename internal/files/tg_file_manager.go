@@ -3,6 +3,7 @@ package files
 import (
 	"context"
 	"fmt"
+	"image"
 	"io"
 	"net/http"
 	"os"
@@ -86,4 +87,15 @@ func (fm *telegramFileManager) DownloadToTemp(ctx context.Context, fileID string
 	}
 
 	return localName, cleanup, nil
+}
+
+func (fm *telegramFileManager) LoadImage(path string) (image.Image, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	return img, err
 }
