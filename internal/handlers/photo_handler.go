@@ -46,14 +46,18 @@ func (ph *PhotoHandler) HandleUpdate(ctx context.Context, update telego.Update) 
 	chatID := msg.Chat.ID
 
 	if !hasPhoto(msg) {
-		if err := ph.bot.SendText(ctx, chatID, "🔗 Please send a photo or document with caption (optional)."); err != nil {
-			ph.logger.Println("Error sending text:", err)
+		if ph.stateStore.IsProcessing(chatID) {
+			_ = ph.bot.SendText(ctx, chatID, "😵‍💫 Slow down, I'm already postinatin' it.")
+		} else {
+			if err := ph.bot.SendText(ctx, chatID, "🔗 Please send a photo or document with caption (optional)."); err != nil {
+				ph.logger.Println("Error sending text:", err)
+			}
 		}
 		return
 	}
 
 	err := ph.withProcessing(ctx, chatID, func() error {
-		if err := ph.bot.SendText(ctx, chatID, "⏳ Postinating..."); err == nil {
+		if err := ph.bot.SendText(ctx, chatID, "⏳ Postinating..."); err != nil {
 			ph.logger.Println("Error sending text:", err)
 		}
 

@@ -135,13 +135,13 @@ func (tb *TelegramBot) SendChatAction(ctx context.Context, chatID int64, action 
 	return nil
 }
 
-func (tb *TelegramBot) GetFile(ctx context.Context, fileID string) (*BotFile, error) {
+func (tb *TelegramBot) GetFile(ctx context.Context, fileID string) (*File, error) {
 	f, err := tb.client.GetFile(ctx, &telego.GetFileParams{FileID: fileID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file info for ID %s: %w", fileID, err)
 	}
 
-	return &BotFile{
+	return &File{
 		FileID:   f.FileID,
 		FilePath: f.FilePath,
 	}, nil

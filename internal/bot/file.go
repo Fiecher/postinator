@@ -1,6 +1,6 @@
 package bot
 
-type BotFile struct {
+type File struct {
 	FileID   string
 	FilePath string
 }
