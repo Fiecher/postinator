@@ -8,6 +8,7 @@ import (
 
 type Bot interface {
 	Start(ctx context.Context, handler func(context.Context, telego.Update)) error
+	Stop(ctx context.Context) error
 
 	SendText(ctx context.Context, chatID int64, text string) error
 	SendPhoto(ctx context.Context, chatID int64, filePath string) error

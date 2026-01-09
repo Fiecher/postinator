@@ -3,7 +3,7 @@ package services
 import (
 	"fmt"
 	img "image"
-	"image/png"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 
@@ -73,22 +73,26 @@ func (s *ImageService) Render(inputPath, text string) (string, error) {
 
 	out := filepath.Join(
 		s.tempDir,
-		"output_"+filepath.Base(inputPath)+".png",
+		"output_"+filepath.Base(inputPath)+".jpg",
 	)
 
-	if err := saveImagePNG(out, composed); err != nil {
+	if err := saveImageJPEG(out, composed); err != nil {
 		return "", fmt.Errorf("save output: %w", err)
 	}
 
 	return out, nil
 }
 
-func saveImagePNG(path string, img img.Image) error {
+func saveImageJPEG(path string, image img.Image) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	return png.Encode(f, img)
+	options := &jpeg.Options{
+		Quality: 100,
+	}
+
+	return jpeg.Encode(f, image, options)
 }

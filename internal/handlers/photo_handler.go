@@ -60,6 +60,7 @@ func (ph *PhotoHandler) HandleUpdate(ctx context.Context, update telego.Update) 
 		if err := ph.bot.SendText(ctx, chatID, "⏳ Postinating..."); err != nil {
 			ph.logger.Println("Error sending text:", err)
 		}
+		ph.logger.Println("Postinating...")
 
 		resultPath, cleanup, err := ph.process(ctx, msg)
 		if err != nil {
@@ -74,6 +75,8 @@ func (ph *PhotoHandler) HandleUpdate(ctx context.Context, update telego.Update) 
 		if err = ph.bot.SendText(ctx, chatID, "✅️ Image postinated successfully!"); err != nil {
 			ph.logger.Println("Error sending text:", err)
 		}
+
+		ph.logger.Println("Image postinated successfully.")
 		return nil
 	})
 

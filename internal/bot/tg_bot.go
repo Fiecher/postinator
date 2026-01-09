@@ -59,6 +59,13 @@ func (tb *TelegramBot) Start(ctx context.Context, handler func(context.Context, 
 	}
 }
 
+func (tb *TelegramBot) Stop(ctx context.Context) error {
+	if err := tb.client.Close(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (tb *TelegramBot) sendFileFromPath(
 	ctx context.Context,
 	chatID int64,
