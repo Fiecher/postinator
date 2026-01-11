@@ -6,9 +6,10 @@ type Config struct {
 	AssetsDir string
 	TempDir   string
 
-	BackgroundFile string
-	OverlayFile    string
-	FontFile       string
+	BackgroundFile      string
+	BackgroundStatsFile string
+	OverlayFile         string
+	FontFile            string
 
 	MaxFileSize int64
 }

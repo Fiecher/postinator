@@ -24,6 +24,7 @@ func main() {
 	assetLoader := files.NewAssetLoader(
 		cfg.AssetsDir,
 		cfg.BackgroundFile,
+		cfg.BackgroundStatsFile,
 		cfg.FontFile,
 		cfg.OverlayFile,
 	)
@@ -33,7 +34,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	textRenderer := &image.TextRenderer{}
+	textRenderer := &image.TextRenderer{FontPath: "assets/font.ttf"}
 	processor := &image.Processor{}
 	fileManager, err := files.NewTelegramFileManager(
 		botService,

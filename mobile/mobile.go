@@ -29,9 +29,10 @@ func (bc *BotControl) StartBot(token string, assetsDir string, tempDir string) s
 
 	assetLoader := files.NewAssetLoader(
 		assetsDir,
-		"BG.png",
+		"BG1.png",
+		"BG2.png",
 		"font.ttf",
-		"Overlay.png",
+		"Overlay1.png",
 	)
 
 	botService, err := bot.NewTelegramBot(token, logger, 50*1024*1024)

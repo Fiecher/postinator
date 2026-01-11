@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/mymmrac/telego"
 )
@@ -13,6 +14,7 @@ type TelegramBot struct {
 	client      *telego.Bot
 	logger      *log.Logger
 	maxFileSize int64
+	maxRetries  int
 }
 
 func NewTelegramBot(token string, logger *log.Logger, maxFileSize int64) (Bot, error) {
@@ -29,11 +31,12 @@ func NewTelegramBot(token string, logger *log.Logger, maxFileSize int64) (Bot, e
 		client:      b,
 		logger:      logger,
 		maxFileSize: maxFileSize,
+		maxRetries:  5,
 	}, nil
 }
 
 func (tb *TelegramBot) Start(ctx context.Context, handler func(context.Context, telego.Update)) error {
-	updates, err := tb.client.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{Timeout: 30})
+	updates, err := tb.client.UpdatesViaLongPolling(ctx, &telego.GetUpdatesParams{Timeout: 15})
 	if err != nil {
 		return fmt.Errorf("failed to start long polling: %w", err)
 	}
@@ -66,36 +69,45 @@ func (tb *TelegramBot) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (tb *TelegramBot) sendFileFromPath(
-	ctx context.Context,
-	chatID int64,
-	filePath string,
-	sender func(context.Context, *telego.ChatID, telego.InputFile) (*telego.Message, error),
-) error {
-
-	if _, err := os.Stat(filePath); err != nil {
+func (tb *TelegramBot) sendFileFromPath(ctx context.Context, chatID int64, filePath string, sender func(context.Context, *telego.ChatID, telego.InputFile) (*telego.Message, error)) error {
+	info, err := os.Stat(filePath)
+	if err != nil {
 		return fmt.Errorf("file not found %s: %w", filePath, err)
 	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to open file %s: %w", filePath, err)
+	if info.IsDir() {
+		return fmt.Errorf("path is a directory: %s", filePath)
 	}
-	defer func(file *os.File) {
-		if closeErr := file.Close(); closeErr != nil {
-			tb.logger.Printf("Failed to close file %s: %w", filePath, closeErr)
+
+	var lastErr error
+	for attempt := 0; attempt < tb.maxRetries; attempt++ {
+		file, err := os.Open(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %w", filePath, err)
 		}
-	}(file)
+		_, err = sender(ctx, &telego.ChatID{ID: chatID}, telego.InputFile{File: file})
 
-	_, err = sender(
-		ctx,
-		&telego.ChatID{ID: chatID},
-		telego.InputFile{File: file},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to send file to chat %d: %w", chatID, err)
+		if closeErr := file.Close(); closeErr != nil {
+			return closeErr
+		}
+
+		if err == nil {
+			if attempt > 0 {
+				tb.logger.Printf("Successfully sent file to %d after %d retries", chatID, attempt)
+			}
+			return nil
+		}
+
+		lastErr = err
+		tb.logger.Printf("Attempt %d failed to send file to %d: %v", attempt+1, chatID, err)
+
+		if attempt == tb.maxRetries-1 {
+			break
+		}
+
+		time.Sleep(time.Second * 1)
 	}
-	return nil
+
+	return fmt.Errorf("failed to send file to chat %d after %d attempts: %w", chatID, tb.maxRetries, lastErr)
 }
 
 func (tb *TelegramBot) SendPhoto(ctx context.Context, chatID int64, filePath string) error {
@@ -168,4 +180,23 @@ func (tb *TelegramBot) SendFileAuto(ctx context.Context, chatID int64, filePath 
 		return tb.SendPhoto(ctx, chatID, filePath)
 	}
 	return tb.SendDocument(ctx, chatID, filePath)
+}
+
+func (tb *TelegramBot) ShowMenu(ctx context.Context, chatID int64) error {
+	keyboard := telego.ReplyKeyboardMarkup{
+		Keyboard: [][]telego.KeyboardButton{
+			{
+				{Text: "🎟️ Image-post"},
+				{Text: "🎫 Monthly-post"},
+			},
+		},
+		ResizeKeyboard: true,
+	}
+
+	_, err := tb.client.SendMessage(ctx, &telego.SendMessageParams{
+		ChatID:      telego.ChatID{ID: chatID},
+		Text:        "Choose wisely:",
+		ReplyMarkup: &keyboard,
+	})
+	return err
 }

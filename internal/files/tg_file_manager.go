@@ -22,9 +22,17 @@ func NewTelegramFileManager(client bot.Bot, tempDir, token string) (FileManager,
 	if tempDir == "" {
 		tempDir = "temp"
 	}
+
+	if _, err := os.Stat(tempDir); err == nil {
+		if err := os.RemoveAll(tempDir); err != nil {
+			return nil, fmt.Errorf("failed to clear existing temp dir: %w", err)
+		}
+	}
+
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
+
 	return &telegramFileManager{
 		client:  client,
 		tempDir: tempDir,

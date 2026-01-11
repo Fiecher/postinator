@@ -19,9 +19,10 @@ func Load(logger *log.Logger) *Config {
 		AssetsDir: assetsDir,
 		TempDir:   getEnv(logger, "TEMP_DIR", "./temp", parseString),
 
-		BackgroundFile: getEnv(logger, "BG_FILE", "BG.png", parseString),
-		OverlayFile:    getEnv(logger, "OVERLAY_FILE", "Overlay.png", parseString),
-		FontFile:       getEnv(logger, "FONT_FILE", "font.ttf", parseString),
+		BackgroundFile:      getEnv(logger, "BG_FILE", "BG1.png", parseString),
+		BackgroundStatsFile: getEnv(logger, "BG_STATS_FILE", "BG2.png", parseString),
+		OverlayFile:         getEnv(logger, "OVERLAY_FILE", "Overlay1.png", parseString),
+		FontFile:            getEnv(logger, "FONT_FILE", "font.ttf", parseString),
 
 		MaxFileSize: getEnv(logger, "MAX_FILE_SIZE", 10*1024*1024, parseInt),
 	}

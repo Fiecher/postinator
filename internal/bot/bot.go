@@ -18,4 +18,6 @@ type Bot interface {
 
 	GetFile(ctx context.Context, fileID string) (*File, error)
 	FileDownloadURL(filePath string) string
+
+	ShowMenu(ctx context.Context, chatID int64) error
 }
