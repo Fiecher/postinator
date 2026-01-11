@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"image/draw"
 
+	"github.com/fogleman/gg"
 	"github.com/nfnt/resize"
 )
 
@@ -48,6 +49,22 @@ func (p *Processor) DrawCentered(bg image.Image, img image.Image) image.Image {
 	draw.Draw(result, imgBounds.Add(image.Pt(centerX, centerY)), img, image.Point{}, draw.Over)
 
 	return result
+}
+
+func (p *Processor) DrawTextCentered(dc *gg.Context, text, fontPath string) error {
+	fontSize := float64(max(dc.Width(), dc.Height())) / 1000.0 * 85
+
+	if err := dc.LoadFontFace(fontPath, fontSize); err != nil {
+		return err
+	}
+
+	dc.SetRGB(0.13, 0.14, 0.2)
+	dc.DrawStringAnchored(text,
+		float64(dc.Width())/2,
+		float64(dc.Height())*0.86,
+		0.5, 0.5,
+	)
+	return nil
 }
 
 func (p *Processor) OverlayCentered(base image.Image, overlay image.Image, alpha float64) image.Image {

@@ -34,7 +34,6 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	textRenderer := &image.TextRenderer{FontPath: "assets/font.ttf"}
 	processor := &image.Processor{}
 	fileManager, err := files.NewTelegramFileManager(
 		botService,
@@ -47,7 +46,6 @@ func main() {
 
 	imageService := services.NewImageService(
 		assetLoader,
-		textRenderer,
 		processor,
 		fileManager,
 		cfg.TempDir,

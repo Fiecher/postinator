@@ -18,16 +18,14 @@ import (
 )
 
 type ImageService struct {
-	tempDir      string
-	assetLoader  *files.AssetLoader
-	processor    *image.Processor
-	textRenderer *image.TextRenderer
-	fileManager  files.FileManager
+	tempDir     string
+	assetLoader *files.AssetLoader
+	processor   *image.Processor
+	fileManager files.FileManager
 }
 
 func NewImageService(
 	assetLoader *files.AssetLoader,
-	textRenderer *image.TextRenderer,
 	processor *image.Processor,
 	fileManager files.FileManager,
 	tempDir string,
@@ -38,11 +36,10 @@ func NewImageService(
 	}
 
 	return &ImageService{
-		tempDir:      tempDir,
-		assetLoader:  assetLoader,
-		textRenderer: textRenderer,
-		processor:    processor,
-		fileManager:  fileManager,
+		tempDir:     tempDir,
+		assetLoader: assetLoader,
+		processor:   processor,
+		fileManager: fileManager,
 	}
 }
 
@@ -59,8 +56,7 @@ func (s *ImageService) Render(inputPath, text string) (string, error) {
 
 	dc := gg.NewContextForImage(assets.Background)
 
-	s.textRenderer.FontPath = assets.FontPath
-	if err := s.textRenderer.DrawCentered(dc, text); err != nil {
+	if err := s.processor.DrawTextCentered(dc, text, assets.FontPath); err != nil {
 		return "", fmt.Errorf("text render: %w", err)
 	}
 
@@ -120,9 +116,9 @@ func (s *ImageService) RenderStats(items []StatItem, title string, userImagePath
 	labelSize := H * 0.05
 	totalSize := H * 0.075
 
-	timeFace, _ := gg.LoadFontFace(s.textRenderer.FontPath, timeSize)
-	labelFace, _ := gg.LoadFontFace(s.textRenderer.FontPath, labelSize)
-	totalFace, _ := gg.LoadFontFace(s.textRenderer.FontPath, totalSize)
+	timeFace, _ := gg.LoadFontFace(assets.FontPath, timeSize)
+	labelFace, _ := gg.LoadFontFace(assets.FontPath, labelSize)
+	totalFace, _ := gg.LoadFontFace(assets.FontPath, totalSize)
 
 	if userImagePath != "" {
 		s.drawUserStatsImage(dc, assets, userImagePath, W, H)
