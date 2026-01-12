@@ -3,21 +3,20 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"log"
 	"os"
+	"postinator/internal/bot"
+	"postinator/internal/files"
 	"postinator/internal/image"
 	"postinator/internal/services"
 	"strings"
-
-	"postinator/internal/bot"
-	"postinator/internal/files"
 
 	"github.com/mymmrac/telego"
 )
 
 type Handler struct {
 	imageService *services.ImageService
+	togglService *services.TogglService
 	bot          bot.Bot
 	fileManager  files.FileManager
 	stateStore   *image.RenderStateStore
@@ -26,6 +25,7 @@ type Handler struct {
 
 func NewHandler(
 	imageService *services.ImageService,
+	togglService *services.TogglService,
 	bot bot.Bot,
 	fileManager files.FileManager,
 	stateStore *image.RenderStateStore,
@@ -33,6 +33,7 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		imageService: imageService,
+		togglService: togglService,
 		bot:          bot,
 		fileManager:  fileManager,
 		stateStore:   stateStore,
@@ -54,11 +55,11 @@ func (ph *Handler) HandleUpdate(ctx context.Context, update telego.Update) {
 		return
 	case "🎫 Monthly-post":
 		ph.stateStore.SetMode(chatID, image.ModeStats)
-		_ = ph.bot.SendText(ctx, chatID, "📊 Send photo for STATS (caption optional)")
+		_ = ph.bot.SendText(ctx, chatID, "📊 Send photo for STATS (caption required).")
 		return
 	case "🎟️ Image-post":
 		ph.stateStore.SetMode(chatID, image.ModePost)
-		_ = ph.bot.SendText(ctx, chatID, "🖼️ Send photo for POST (caption optional)")
+		_ = ph.bot.SendText(ctx, chatID, "🖼️ Send photo for POST (caption optional).")
 		return
 	}
 
@@ -86,38 +87,61 @@ func (ph *Handler) HandleUpdate(ctx context.Context, update telego.Update) {
 	defer ph.stateStore.Finish(chatID)
 
 	_ = ph.processByMode(ctx, msg, mode)
-	_ = ph.bot.SendText(ctx, chatID, "✅ Inated it successfully!")
 }
 
 func (ph *Handler) processByMode(ctx context.Context, msg *telego.Message, mode int) error {
 	if mode == image.ModeStats {
-		return ph.executeStatsRender(ctx, msg)
+		return ph.handleStatsPost(ctx, msg)
 	}
 	return ph.handleImagePost(ctx, msg)
 }
 
-func (ph *Handler) executeStatsRender(ctx context.Context, msg *telego.Message) error {
+func (ph *Handler) handleStatsPost(ctx context.Context, msg *telego.Message) error {
 	chatID := msg.Chat.ID
-	title := strings.ToUpper(getText(msg))
-
 	_ = ph.bot.SendText(ctx, chatID, "⏳ Statsinating...")
 
-	data := ph.getMockData()
-	fileID, _ := extractFileID(msg)
+	resultPath, cleanup, err := ph.executeStatsPost(ctx, msg)
+	if err != nil {
+		return ph.fail(chatID, "executeStatsPost failed", "🚧 Error while statsinating.", err)
+	}
+	defer cleanup()
+
+	return ph.bot.SendFileAuto(ctx, chatID, resultPath)
+}
+
+func (ph *Handler) executeStatsPost(ctx context.Context, msg *telego.Message) (string, func(), error) {
+	title := strings.ToUpper(getText(msg))
+
+	data, err := ph.togglService.GetMonthlyStats(ctx, title)
+	if err != nil {
+		return "", nil, fmt.Errorf("toggl failed: %w", err)
+	}
+
+	if len(data) == 0 {
+		return "", nil, fmt.Errorf("no data")
+	}
+
+	fileID, err := extractFileID(msg)
+	if err != nil {
+		return "", nil, fmt.Errorf("no file: %w", err)
+	}
 
 	localImgPath, cleanupTemp, err := ph.fileManager.DownloadToTemp(ctx, fileID)
 	if err != nil {
-		return ph.fail(chatID, "download failed", "🚧 Error downloading services", err)
+		return "", nil, fmt.Errorf("download failed: %w", err)
 	}
-	defer cleanupTemp()
 
 	resultPath, err := ph.imageService.RenderStats(data, title, localImgPath)
 	if err != nil {
-		return ph.fail(chatID, "render failed", "❌ Error rendering stats", err)
+		cleanupTemp()
+		return "", nil, fmt.Errorf("render failed: %w", err)
 	}
-	defer os.Remove(resultPath)
 
-	return ph.bot.SendFileAuto(ctx, chatID, resultPath)
+	cleanup := func() {
+		cleanupTemp()
+		_ = os.Remove(resultPath)
+	}
+	return resultPath, cleanup, nil
 }
 
 func (ph *Handler) handleImagePost(ctx context.Context, msg *telego.Message) error {
@@ -126,22 +150,11 @@ func (ph *Handler) handleImagePost(ctx context.Context, msg *telego.Message) err
 
 	resultPath, cleanup, err := ph.executeImagePost(ctx, msg)
 	if err != nil {
-		return ph.fail(chatID, "executeImagePost failed", "🚧 Error processing services", err)
+		return ph.fail(chatID, "executeImagePost failed", "🚧 Error while postinating.", err)
 	}
 	defer cleanup()
 
 	return ph.bot.SendFileAuto(ctx, chatID, resultPath)
-}
-
-func (ph *Handler) getMockData() []image.StatItem {
-	return []image.StatItem{
-		{Label: "writing", Duration: "555:14", Color: color.RGBA{R: 242, G: 201, B: 76, A: 255}},
-		{Label: "blender", Duration: "12:54", Color: color.RGBA{R: 242, G: 153, B: 74, A: 255}},
-		{Label: "java", Duration: "15:54", Color: color.RGBA{R: 235, G: 87, B: 87, A: 255}},
-		{Label: "gym", Duration: "12:53", Color: color.RGBA{R: 47, G: 128, B: 237, A: 255}},
-		{Label: "reading", Duration: "13:04", Color: color.RGBA{R: 39, G: 174, B: 96, A: 255}},
-		{Label: "other", Duration: "01:20", Color: color.RGBA{R: 211, G: 84, B: 0, A: 255}},
-	}
 }
 
 func (ph *Handler) executeImagePost(ctx context.Context, msg *telego.Message) (string, func(), error) {

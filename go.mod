@@ -8,6 +8,8 @@ require (
 	github.com/fogleman/gg v1.3.0
 	github.com/mymmrac/telego v1.3.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	golang.org/x/image v0.34.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -25,10 +27,5 @@ require (
 	github.com/valyala/fasthttp v1.68.0 // indirect
 	github.com/valyala/fastjson v1.6.4 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
-	golang.org/x/image v0.34.0 // indirect
-	golang.org/x/mobile v0.0.0-20251209145715-2553ed8ce294 // indirect
-	golang.org/x/mod v0.31.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
 )
