@@ -1,0 +1,21 @@
+bot_token: "YOUR_TELEGRAM_BOT_TOKEN"
+toggl_token: "YOUR_TOGGLTRACK_TOKEN"
+toggl_workspace: YOUR_TOGGLTRACK_WORKSPACE_ID
+background_file: "BG1.png"
+background_stats_file: "BG2.png"
+overlay_file: "Overlay1.png"
+font_file: "font.ttf"
+assets_dir: "./assets"
+temp_dir: "./temp"
+max_file_size: 10485760
+stats:
+  other:
+    display_name: "other"
+    color: "#dcdcdc"
+  mappings:
+    - display_name: "blender"
+      color: "#e97600"
+      toggl_names: [ "Blender" ]
+    - display_name: "go"
+      color: "#34b0d6"
+      toggl_names: [ "Go" ]
