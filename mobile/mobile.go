@@ -9,7 +9,6 @@ import (
 	"postinator/internal/handlers"
 	"postinator/internal/image"
 	"postinator/internal/services"
-	"postinator/internal/storage"
 )
 
 type BotControl struct {
@@ -40,9 +39,6 @@ func (bc *BotControl) StartBot(token string, assetsDir string, tempDir string) s
 		return fmt.Sprintf("Error creating bot: %v", err)
 	}
 
-	textRenderer := &image.TextRenderer{}
-	processor := &image.Processor{}
-
 	fileManager, err := files.NewTelegramFileManager(
 		botService,
 		tempDir,
@@ -54,14 +50,12 @@ func (bc *BotControl) StartBot(token string, assetsDir string, tempDir string) s
 
 	imageService := services.NewImageService(
 		assetLoader,
-		textRenderer,
-		processor,
 		fileManager,
 		tempDir,
 	)
 
-	photoStorage := storage.NewRenderStateStore()
-	photoHandler := handlers.NewPhotoHandler(
+	photoStorage := image.NewRenderStateStore()
+	photoHandler := handlers.NewHandler(
 		imageService,
 		botService,
 		fileManager,

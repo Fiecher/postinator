@@ -6,15 +6,14 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"postinator/internal/handlers"
 	"syscall"
 
 	"postinator/internal/bot"
 	"postinator/internal/config"
 	"postinator/internal/files"
-	"postinator/internal/handlers"
 	"postinator/internal/image"
 	"postinator/internal/services"
-	"postinator/internal/storage"
 )
 
 func main() {
@@ -34,7 +33,6 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	processor := &image.Processor{}
 	fileManager, err := files.NewTelegramFileManager(
 		botService,
 		cfg.TempDir,
@@ -46,14 +44,13 @@ func main() {
 
 	imageService := services.NewImageService(
 		assetLoader,
-		processor,
 		fileManager,
 		cfg.TempDir,
 	)
 
-	photoStorage := storage.NewRenderStateStore()
+	photoStorage := image.NewRenderStateStore()
 
-	photoHandler := handlers.NewPhotoHandler(
+	photoHandler := handlers.NewHandler(
 		imageService,
 		botService,
 		fileManager,
