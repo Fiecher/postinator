@@ -33,3 +33,16 @@ func Load(logger *log.Logger) *Config {
 	logger.Printf("Config loaded successfully. Mappings found: %d", len(cfg.Stats.Mappings))
 	return cfg
 }
+
+func LoadFromPath(path string) (*Config, error) {
+	cfg := &Config{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(data, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}

@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
+
 	"postinator/internal/bot"
+	"postinator/internal/config"
 	"postinator/internal/files"
 	"postinator/internal/handlers"
 	"postinator/internal/image"
 	"postinator/internal/services"
+	"postinator/internal/toggl"
 )
 
 type BotControl struct {
@@ -19,30 +23,35 @@ func NewBotControl() *BotControl {
 	return &BotControl{}
 }
 
-func (bc *BotControl) StartBot(token string, assetsDir string, tempDir string) string {
+func (bc *BotControl) StartBot(configDir string) string {
 	if bc.cancel != nil {
 		return "Bot already started"
 	}
 
 	logger := log.Default()
 
+	cfg, err := loadConfigFromPath(configDir)
+	if err != nil {
+		return fmt.Sprintf("Config error: %v", err)
+	}
+
 	assetLoader := files.NewAssetLoader(
-		assetsDir,
-		"BG1.png",
-		"BG2.png",
-		"font.ttf",
-		"Overlay1.png",
+		cfg.AssetsDir,
+		cfg.BackgroundFile,
+		cfg.BackgroundStatsFile,
+		cfg.FontFile,
+		cfg.OverlayFile,
 	)
 
-	botService, err := bot.NewTelegramBot(token, logger, 50*1024*1024)
+	botService, err := bot.NewTelegramBot(cfg.BotToken, logger, cfg.MaxFileSize)
 	if err != nil {
 		return fmt.Sprintf("Error creating bot: %v", err)
 	}
 
 	fileManager, err := files.NewTelegramFileManager(
 		botService,
-		tempDir,
-		token,
+		cfg.TempDir,
+		cfg.BotToken,
 	)
 	if err != nil {
 		return fmt.Sprintf("Error creating file manager: %v", err)
@@ -51,12 +60,17 @@ func (bc *BotControl) StartBot(token string, assetsDir string, tempDir string) s
 	imageService := services.NewImageService(
 		assetLoader,
 		fileManager,
-		tempDir,
+		cfg.TempDir,
 	)
 
+	togglClient := toggl.NewClient(cfg.TogglToken, cfg.TogglWorkspaceID)
+	togglService := services.NewTogglService(togglClient, cfg.Stats)
+
 	photoStorage := image.NewRenderStateStore()
+
 	photoHandler := handlers.NewHandler(
 		imageService,
+		togglService,
 		botService,
 		fileManager,
 		photoStorage,
@@ -83,4 +97,9 @@ func (bc *BotControl) StopBot() {
 		bc.cancel = nil
 		log.Println("Bot stopped by user")
 	}
+}
+
+func loadConfigFromPath(dir string) (*config.Config, error) {
+	configPath := filepath.Join(dir, "config.yaml")
+	return config.LoadFromPath(configPath)
 }
