@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"postinator/internal/files"
 	"postinator/internal/image"
+	"postinator/internal/toggl"
 )
 
 type ImageService struct {
@@ -60,7 +61,7 @@ func (s *ImageService) RenderPost(inputPath, text string) (string, error) {
 	return out, nil
 }
 
-func (s *ImageService) RenderStats(items []image.StatItem, title string, userImagePath string) (string, error) {
+func (s *ImageService) RenderStats(items []toggl.StatItem, title string, userImagePath string) (string, error) {
 	assets, err := s.assetLoader.Load()
 	if err != nil {
 		return "", fmt.Errorf("failed to load assets: %w", err)

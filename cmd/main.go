@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"postinator/internal/handlers"
+	toggl2 "postinator/internal/toggl"
 	"syscall"
 
 	"postinator/internal/bot"
@@ -49,9 +50,12 @@ func main() {
 	)
 
 	photoStorage := image.NewRenderStateStore()
+	togglClient := toggl2.NewClient(cfg.TogglToken, cfg.TogglWorkspaceID)
+	togglService := services.NewTogglService(togglClient, cfg.Stats)
 
 	photoHandler := handlers.NewHandler(
 		imageService,
+		togglService,
 		botService,
 		fileManager,
 		photoStorage,

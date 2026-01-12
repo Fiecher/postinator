@@ -8,6 +8,7 @@ import (
 	"image/jpeg"
 	"os"
 	"postinator/internal/files"
+	"postinator/internal/toggl"
 	"strconv"
 	"strings"
 
@@ -43,7 +44,7 @@ func RenderPostImage(assets *files.Assets, userImg image.Image, text string) (im
 	return composed, nil
 }
 
-func RenderStatsImage(assets *files.Assets, items []StatItem, title string, userImg image.Image) (image.Image, error) {
+func RenderStatsImage(assets *files.Assets, items []toggl.StatItem, title string, userImg image.Image) (image.Image, error) {
 	if assets == nil {
 		return nil, fmt.Errorf("assets is nil")
 	}
@@ -71,7 +72,7 @@ func RenderStatsImage(assets *files.Assets, items []StatItem, title string, user
 	maxTextWidth := timeSize * 1.8
 
 	var totalSeconds int
-	displayedItems := make([]StatItem, 0, 6)
+	displayedItems := make([]toggl.StatItem, 0, 6)
 	for i, item := range items {
 		if i >= 6 {
 			break
@@ -114,7 +115,7 @@ func RenderStatsImage(assets *files.Assets, items []StatItem, title string, user
 		chartHeight := H * 0.008
 		chartWidth := userImgSize
 		chartX := userImgCenterX - (userImgSize / 2.0)
-		chartY := userImgCenterY + (userImgSize / 2.0) - 7
+		chartY := userImgCenterY + (userImgSize / 2.0) + 2
 
 		drawActivityChart(dc, displayedItems, chartX, chartY, chartWidth, chartHeight, totalSeconds)
 	}
@@ -227,15 +228,9 @@ func overlayCentered(base image.Image, overlay image.Image, alpha float64) image
 	return baseRGBA
 }
 
-type StatItem struct {
-	Label    string
-	Duration string
-	Color    color.RGBA
-}
-
 func drawUserStatsImage(dc *gg.Context, assets *files.Assets, img image.Image, W, H float64) {
 
-	centerX, centerY := W*0.75, H*0.42
+	centerX, centerY := W*0.75, H*0.43
 	targetSize := int(H * 0.45)
 
 	uImg := cropToSquare(img)
@@ -253,7 +248,7 @@ func drawUserStatsImage(dc *gg.Context, assets *files.Assets, img image.Image, W
 	}
 }
 
-func drawActivityChart(dc *gg.Context, items []StatItem, x, y, w, h float64, totalSec int) {
+func drawActivityChart(dc *gg.Context, items []toggl.StatItem, x, y, w, h float64, totalSec int) {
 	if totalSec <= 0 {
 		return
 	}
@@ -283,7 +278,7 @@ func drawTimeWings(dc *gg.Context, x, y, fontSize float64, c color.Color) {
 	dc.SetColor(c)
 
 	scale := (fontSize / 125.5) * 0.77
-	margin := fontSize
+	margin := fontSize - 10
 
 	drawPointWing(dc, x-margin, y, scale, []struct{ x, y float64 }{
 		{199.4, 338.1}, {236.9, 338.1}, {251.85, 209.59}, {215.42, 209.59}, {235.54, 275.79},
