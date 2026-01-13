@@ -8,13 +8,15 @@ import (
 
 type AssetLoader struct {
 	bgPath      string
+	bgStatsPath string
 	fontPath    string
 	overlayPath string
 }
 
-func NewAssetLoader(assetsDir, bgFile, fontFile, overlayFile string) *AssetLoader {
+func NewAssetLoader(assetsDir, bgFile, bgStatsFile, fontFile, overlayFile string) *AssetLoader {
 	return &AssetLoader{
 		bgPath:      filepath.Join(assetsDir, bgFile),
+		bgStatsPath: filepath.Join(assetsDir, bgStatsFile),
 		fontPath:    filepath.Join(assetsDir, fontFile),
 		overlayPath: filepath.Join(assetsDir, overlayFile),
 	}
@@ -40,11 +42,17 @@ func (l *AssetLoader) Load() (*Assets, error) {
 		return nil, err
 	}
 
+	bgStats, err := openImage(l.bgStatsPath)
+	if err != nil {
+		return nil, err
+	}
+
 	overlay, _ := openImage(l.overlayPath)
 
 	return &Assets{
-		Background: bg,
-		Overlay:    overlay,
-		FontPath:   l.fontPath,
+		Background:      bg,
+		BackgroundStats: bgStats,
+		Overlay:         overlay,
+		FontPath:        l.fontPath,
 	}, nil
 }

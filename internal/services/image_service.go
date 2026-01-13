@@ -3,28 +3,21 @@ package services
 import (
 	"fmt"
 	img "image"
-	"image/png"
 	"os"
 	"path/filepath"
-
-	"github.com/fogleman/gg"
-
 	"postinator/internal/files"
 	"postinator/internal/image"
+	"postinator/internal/toggl"
 )
 
 type ImageService struct {
-	tempDir      string
-	assetLoader  *files.AssetLoader
-	processor    *image.Processor
-	textRenderer *image.TextRenderer
-	fileManager  files.FileManager
+	tempDir     string
+	assetLoader *files.AssetLoader
+	fileManager files.FileManager
 }
 
 func NewImageService(
 	assetLoader *files.AssetLoader,
-	textRenderer *image.TextRenderer,
-	processor *image.Processor,
 	fileManager files.FileManager,
 	tempDir string,
 ) *ImageService {
@@ -34,15 +27,13 @@ func NewImageService(
 	}
 
 	return &ImageService{
-		tempDir:      tempDir,
-		assetLoader:  assetLoader,
-		textRenderer: textRenderer,
-		processor:    processor,
-		fileManager:  fileManager,
+		tempDir:     tempDir,
+		assetLoader: assetLoader,
+		fileManager: fileManager,
 	}
 }
 
-func (s *ImageService) Render(inputPath, text string) (string, error) {
+func (s *ImageService) RenderPost(inputPath, text string) (string, error) {
 	assets, err := s.assetLoader.Load()
 	if err != nil {
 		return "", fmt.Errorf("asset load error: %w", err)
@@ -53,42 +44,46 @@ func (s *ImageService) Render(inputPath, text string) (string, error) {
 		return "", fmt.Errorf("load user image: %w", err)
 	}
 
-	dc := gg.NewContextForImage(assets.Background)
-
-	s.textRenderer.FontPath = assets.FontPath
-	if err := s.textRenderer.DrawCentered(dc, text); err != nil {
-		return "", fmt.Errorf("text render: %w", err)
-	}
-
-	userImg = s.processor.CropToSquare(userImg)
-
-	target := dc.Width() * 6 / 10
-	userImg = s.processor.Resize(userImg, target)
-
-	composed := s.processor.DrawCentered(dc.Image(), userImg)
-
-	if assets.Overlay != nil {
-		composed = s.processor.OverlayCentered(composed, assets.Overlay, 0.6)
+	outImg, err := image.RenderPostImage(assets, userImg, text)
+	if err != nil {
+		return "", fmt.Errorf("render post: %w", err)
 	}
 
 	out := filepath.Join(
 		s.tempDir,
-		"output_"+filepath.Base(inputPath)+".png",
+		"output_"+filepath.Base(inputPath)+".jpg",
 	)
 
-	if err := saveImagePNG(out, composed); err != nil {
+	if err := image.SaveImageJPEG(out, outImg); err != nil {
 		return "", fmt.Errorf("save output: %w", err)
 	}
 
 	return out, nil
 }
 
-func saveImagePNG(path string, img img.Image) error {
-	f, err := os.Create(path)
+func (s *ImageService) RenderStats(items []toggl.StatItem, title string, userImagePath string) (string, error) {
+	assets, err := s.assetLoader.Load()
 	if err != nil {
-		return err
+		return "", fmt.Errorf("failed to load assets: %w", err)
 	}
-	defer f.Close()
 
-	return png.Encode(f, img)
+	var userImg img.Image
+	if userImagePath != "" {
+		uImg, err := s.fileManager.LoadImage(userImagePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to load user image: %w", err)
+		}
+		userImg = uImg
+	}
+
+	outImg, err := image.RenderStatsImage(assets, items, title, userImg)
+	if err != nil {
+		return "", fmt.Errorf("render stats: %w", err)
+	}
+
+	outPath := filepath.Join(s.tempDir, fmt.Sprintf("stats_%d.jpg", os.Getpid()))
+	if err := image.SaveImageJPEG(outPath, outImg); err != nil {
+		return "", fmt.Errorf("save stats output: %w", err)
+	}
+	return outPath, nil
 }

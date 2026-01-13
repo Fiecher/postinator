@@ -29,3 +29,4 @@ go.work.sum
 temp
 assets/test.jpg
 assets/font.ttf
+config.yaml

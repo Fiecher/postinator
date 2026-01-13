@@ -6,15 +6,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"postinator/internal/handlers"
+	toggl2 "postinator/internal/toggl"
 	"syscall"
 
 	"postinator/internal/bot"
 	"postinator/internal/config"
 	"postinator/internal/files"
-	"postinator/internal/handlers"
 	"postinator/internal/image"
 	"postinator/internal/services"
-	"postinator/internal/storage"
 )
 
 func main() {
@@ -24,6 +24,7 @@ func main() {
 	assetLoader := files.NewAssetLoader(
 		cfg.AssetsDir,
 		cfg.BackgroundFile,
+		cfg.BackgroundStatsFile,
 		cfg.FontFile,
 		cfg.OverlayFile,
 	)
@@ -33,8 +34,6 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	textRenderer := &image.TextRenderer{}
-	processor := &image.Processor{}
 	fileManager, err := files.NewTelegramFileManager(
 		botService,
 		cfg.TempDir,
@@ -46,16 +45,17 @@ func main() {
 
 	imageService := services.NewImageService(
 		assetLoader,
-		textRenderer,
-		processor,
 		fileManager,
 		cfg.TempDir,
 	)
 
-	photoStorage := storage.NewRenderStateStore()
+	photoStorage := image.NewRenderStateStore()
+	togglClient := toggl2.NewClient(cfg.TogglToken, cfg.TogglWorkspaceID)
+	togglService := services.NewTogglService(togglClient, cfg.Stats)
 
-	photoHandler := handlers.NewPhotoHandler(
+	photoHandler := handlers.NewHandler(
 		imageService,
+		togglService,
 		botService,
 		fileManager,
 		photoStorage,

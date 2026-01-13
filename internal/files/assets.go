@@ -3,7 +3,8 @@ package files
 import "image"
 
 type Assets struct {
-	Background image.Image
-	Overlay    image.Image
-	FontPath   string
+	Background      image.Image
+	BackgroundStats image.Image
+	Overlay         image.Image
+	FontPath        string
 }

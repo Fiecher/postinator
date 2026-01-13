@@ -3,49 +3,46 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
+
+	"gopkg.in/yaml.v3"
 )
 
 func Load(logger *log.Logger) *Config {
-	token := os.Getenv("TOKEN")
-	if token == "" {
-		logger.Fatal("TOKEN environment variable is required")
-	}
+	cfg := &Config{}
 
-	assetsDir := getEnv(logger, "ASSETS_DIR", "./assets", parseString)
-
-	return &Config{
-		BotToken:  token,
-		AssetsDir: assetsDir,
-		TempDir:   getEnv(logger, "TEMP_DIR", "./temp", parseString),
-
-		BackgroundFile: getEnv(logger, "BG_FILE", "BG.png", parseString),
-		OverlayFile:    getEnv(logger, "OVERLAY_FILE", "Overlay.png", parseString),
-		FontFile:       getEnv(logger, "FONT_FILE", "font.ttf", parseString),
-
-		MaxFileSize: getEnv(logger, "MAX_FILE_SIZE", 10*1024*1024, parseInt),
-	}
-}
-
-func getEnv[T any](logger *log.Logger, key string, defaultValue T, parser func(string) (T, error)) T {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultValue
-	}
-
-	parsed, err := parser(val)
+	data, err := os.ReadFile("config.yaml")
 	if err != nil {
-		logger.Printf("[WARN]: invalid value for %s (%s). Using default: %v\n", key, val, defaultValue)
-		return defaultValue
+		logger.Fatalf("[ERR]: config.yaml not found: %v", err)
 	}
 
-	return parsed
+	err = yaml.Unmarshal(data, cfg)
+	if err != nil {
+		logger.Fatalf("[ERR]: failed to parse config.yaml: %v", err)
+	}
+
+	if cfg.BotToken == "" {
+		logger.Fatal("[ERR]: bot_token is empty in config.yaml")
+	}
+	if cfg.TogglToken == "" {
+		logger.Fatal("[ERR]: toggl_token is empty in config.yaml")
+	}
+	if cfg.TogglWorkspaceID == 0 {
+		logger.Fatal("[ERR]: toggl_workspace is empty or 0 in config.yaml")
+	}
+
+	logger.Printf("Config loaded successfully. Mappings found: %d", len(cfg.Stats.Mappings))
+	return cfg
 }
 
-func parseString(val string) (string, error) {
-	return val, nil
-}
-
-func parseInt(val string) (int64, error) {
-	return strconv.ParseInt(val, 10, 64)
+func LoadFromPath(path string) (*Config, error) {
+	cfg := &Config{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(data, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
