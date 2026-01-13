@@ -35,6 +35,13 @@ func (bc *BotControl) StartBot(configDir string) string {
 		return fmt.Sprintf("Config error: %v", err)
 	}
 
+	if !filepath.IsAbs(cfg.AssetsDir) {
+		cfg.AssetsDir = filepath.Join(configDir, cfg.AssetsDir)
+	}
+	if !filepath.IsAbs(cfg.TempDir) {
+		cfg.TempDir = filepath.Join(configDir, cfg.TempDir)
+	}
+
 	assetLoader := files.NewAssetLoader(
 		cfg.AssetsDir,
 		cfg.BackgroundFile,
