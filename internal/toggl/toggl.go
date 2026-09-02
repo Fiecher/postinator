@@ -182,6 +182,13 @@ func ParseHexColor(s string) color.RGBA {
 	fmt.Sscanf(s, "#%02x%02x%02x", &r, &g, &b)
 	return color.RGBA{R: r, G: g, B: b, A: 255}
 }
+
+type seasonRange struct {
+	startMonth time.Month
+	endMonth   time.Month
+	wraps      bool
+}
+
 func (c *Client) ParseDates(caption string) (time.Time, time.Time, error) {
 	if strings.TrimSpace(caption) == "" {
 		return time.Time{}, time.Time{}, fmt.Errorf("empty title")
@@ -189,21 +196,35 @@ func (c *Client) ParseDates(caption string) (time.Time, time.Time, error) {
 
 	months := map[string]time.Month{
 		"ЯНВАРЬ": 1, "ФЕВРАЛЬ": 2, "МАРТ": 3, "АПРЕЛЬ": 4, "МАЙ": 5, "ИЮНЬ": 6,
-		"ИЮЛЬ": 7, "АВГУСТ": 8, "СЕНТЯБРЬ": 9, "ОКТЯБРЬ": 10, "НOЯБРЬ": 11, "ДЕКАБРЬ": 12,
+		"ИЮЛЬ": 7, "АВГУСТ": 8, "СЕНТЯБРЬ": 9, "ОКТЯБРЬ": 10, "НОЯБРЬ": 11, "ДЕКАБРЬ": 12,
 	}
 
-	words := strings.Fields(strings.ToUpper(caption))
+	seasons := map[string]seasonRange{
+		"ВЕСНА": {startMonth: 3, endMonth: 5},
+		"ЛЕТО":  {startMonth: 6, endMonth: 8},
+		"ОСЕНЬ": {startMonth: 9, endMonth: 11},
+		"ЗИМА":  {startMonth: 12, endMonth: 2, wraps: true},
+	}
+
+	normalized := strings.ReplaceAll(strings.ToUpper(caption), "-", " - ")
+	words := strings.Fields(normalized)
 	now := time.Now()
 
-	var targetMonth time.Month
+	var foundMonths []time.Month
+	var foundSeason string
 	var targetYear int
-	monthFound := false
 	yearFound := false
 
 	for _, word := range words {
+		if word == "-" {
+			continue
+		}
 		if m, ok := months[word]; ok {
-			targetMonth = m
-			monthFound = true
+			foundMonths = append(foundMonths, m)
+			continue
+		}
+		if _, ok := seasons[word]; ok {
+			foundSeason = word
 			continue
 		}
 
@@ -214,11 +235,36 @@ func (c *Client) ParseDates(caption string) (time.Time, time.Time, error) {
 		}
 	}
 
-	if monthFound {
-		if !yearFound {
-			targetYear = now.Year()
+	if !yearFound {
+		targetYear = now.Year()
+	}
+
+	// Season, e.g. "ЛЕТО 2026" or "ЗИМА 2043".
+	if foundSeason != "" {
+		rng := seasons[foundSeason]
+		startYear := targetYear
+		if rng.wraps {
+			startYear = targetYear - 1
 		}
-		start := time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, time.UTC)
+		start := time.Date(startYear, rng.startMonth, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(targetYear, rng.endMonth+1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+		return start, end, nil
+	}
+
+	if len(foundMonths) >= 2 {
+		startMonth := foundMonths[0]
+		endMonth := foundMonths[len(foundMonths)-1]
+		endYear := targetYear
+		if endMonth < startMonth {
+			endYear = targetYear + 1
+		}
+		start := time.Date(targetYear, startMonth, 1, 0, 0, 0, 0, time.UTC)
+		end := time.Date(endYear, endMonth+1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+		return start, end, nil
+	}
+
+	if len(foundMonths) == 1 {
+		start := time.Date(targetYear, foundMonths[0], 1, 0, 0, 0, 0, time.UTC)
 		end := start.AddDate(0, 1, -1)
 		return start, end, nil
 	}
